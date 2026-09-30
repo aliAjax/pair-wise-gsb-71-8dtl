@@ -473,6 +473,26 @@ code {
   white-space: nowrap;
 }
 
+.version-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: -4px 0 16px;
+  padding: 10px 16px;
+  border: 1px solid #bedaff;
+  border-radius: 7px;
+  background: #f2f7ff;
+  color: #4e5969;
+  font-size: 12px;
+}
+
+.version-strip code {
+  margin: 0 4px;
+  padding: 1px 5px;
+  border-color: #bedaff;
+  background: #fff;
+}
+
 .review-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 390px;

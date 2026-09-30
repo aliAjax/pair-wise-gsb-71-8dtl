@@ -34,6 +34,15 @@ const { data: runs } = useQuery({
       <MetricPanel label="有效基线" :value="dashboard?.activeBaselines ?? 0" note="覆盖 6 个关键页面" tone="blue" />
     </div>
 
+    <a-alert
+      v-if="(dashboard?.needsReview ?? 0) > 0"
+      type="warning"
+      style="margin-bottom: 16px"
+    >
+      有 {{ dashboard?.needsReview }} 条已批准运行受忽略规则改动影响，原审批与基线保留原样，已列入待复核。
+      <router-link to="/approvals">前往复核</router-link>
+    </a-alert>
+
     <div class="dashboard-grid">
       <a-card class="work-panel" :bordered="false">
         <template #title>近七日运行趋势</template>

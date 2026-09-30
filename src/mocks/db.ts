@@ -1,12 +1,13 @@
-import type { Baseline, DifferenceRegion, IgnoreRule, Project, ScreenshotRun } from '@/types'
+import type { Baseline, DifferenceRegion, IgnoreRule, Project, ScreenshotRun, VersionMeta } from '@/types'
 
 const STORAGE_KEY = 'visual-regression-platform-v1'
 
-interface Database {
+export interface Database {
   projects: Project[]
   runs: ScreenshotRun[]
   baselines: Baseline[]
   rules: IgnoreRule[]
+  meta: VersionMeta
 }
 
 const projects: Project[] = [
@@ -26,6 +27,8 @@ const makeRegions = (prefix: string, intensity: number): DifferenceRegion[] => [
     pixels: Math.round(1840 * intensity),
     kind: 'layout',
     ignored: false,
+    selector: '.checkout-summary-bar',
+    colorDelta: 46,
   },
   {
     id: `${prefix}-r2`,
@@ -37,6 +40,8 @@ const makeRegions = (prefix: string, intensity: number): DifferenceRegion[] => [
     pixels: Math.round(720 * intensity),
     kind: 'color',
     ignored: false,
+    selector: '.price-tag',
+    colorDelta: 18,
   },
   {
     id: `${prefix}-r3`,
@@ -49,6 +54,8 @@ const makeRegions = (prefix: string, intensity: number): DifferenceRegion[] => [
     kind: 'environment',
     ignored: true,
     ruleId: 'rule-time',
+    selector: '[data-visual-ignore="relative-time"]',
+    colorDelta: 9,
   },
 ]
 
@@ -67,6 +74,7 @@ const runs: ScreenshotRun[] = [
     baselineVersion: 'v6.17.4-baseline',
     currentVersion: 'v6.18.0-rc2',
     regions: makeRegions('1048', 1),
+    regionsRulesVersion: 1,
   },
   {
     id: 'run-1047',
@@ -82,6 +90,7 @@ const runs: ScreenshotRun[] = [
     baselineVersion: 'v6.17.4-baseline',
     currentVersion: 'v6.18.0-rc2',
     regions: makeRegions('1047', 0.7),
+    regionsRulesVersion: 1,
   },
   {
     id: 'run-1046',
@@ -97,12 +106,14 @@ const runs: ScreenshotRun[] = [
     baselineVersion: 'v5.9.1-baseline',
     currentVersion: 'billing-v3.7',
     regions: makeRegions('1046', 1.4),
+    regionsRulesVersion: 1,
     review: {
       category: 'design-change',
       decision: 'approved',
       reviewer: '林默',
       reason: '新计费周期列按需求上线，已核对设计稿和验收单。',
       reviewedAt: '2026-09-28T18:02:00+08:00',
+      rulesVersion: 1,
     },
   },
   {
@@ -119,6 +130,7 @@ const runs: ScreenshotRun[] = [
     baselineVersion: 'v2.4.0-baseline',
     currentVersion: 'campaign-v2',
     regions: makeRegions('1045', 2.2),
+    regionsRulesVersion: 1,
     review: {
       category: 'render-error',
       decision: 'rejected',
@@ -141,6 +153,7 @@ const runs: ScreenshotRun[] = [
     baselineVersion: 'v5.9.1-baseline',
     currentVersion: 'v5.10.0-rc1',
     regions: makeRegions('1044', 0.9),
+    regionsRulesVersion: 1,
   },
   {
     id: 'run-1043',
@@ -156,6 +169,7 @@ const runs: ScreenshotRun[] = [
     baselineVersion: 'v2.5.3-baseline',
     currentVersion: 'v2.6.0-rc3',
     regions: makeRegions('1043', 0.5),
+    regionsRulesVersion: 1,
   },
 ]
 
@@ -172,6 +186,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-09-19T11:30:00+08:00',
     runId: 'run-998',
     active: true,
+    rulesVersion: 1,
   },
   {
     id: 'base-console-billing',
@@ -185,6 +200,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-09-12T14:05:00+08:00',
     runId: 'run-961',
     active: true,
+    rulesVersion: 1,
   },
   {
     id: 'base-growth-campaign',
@@ -198,6 +214,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-08-28T10:10:00+08:00',
     runId: 'run-902',
     active: false,
+    rulesVersion: 1,
   },
   {
     id: 'base-commerce-list',
@@ -211,6 +228,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-09-20T16:40:00+08:00',
     runId: 'run-1002',
     active: true,
+    rulesVersion: 1,
   },
 ]
 
@@ -261,7 +279,51 @@ const rules: IgnoreRule[] = [
   },
 ]
 
-const seed = (): Database => ({ projects, runs, baselines, rules })
+const seed = (): Database => ({
+  projects,
+  runs,
+  baselines,
+  rules,
+  meta: { rulesVersion: 1, rulesUpdatedAt: '2026-09-02T09:00:00+08:00' },
+})
+
+/** 补齐历史 localStorage 数据缺少的版本对账字段 */
+const migrate = (db: Database): Database => {
+  let changed = false
+  if (!db.meta) {
+    db.meta = { rulesVersion: 1, rulesUpdatedAt: '2026-09-02T09:00:00+08:00' }
+    changed = true
+  }
+  for (const run of db.runs) {
+    if (typeof run.regionsRulesVersion !== 'number') {
+      run.regionsRulesVersion = 1
+      changed = true
+    }
+    for (const region of run.regions) {
+      if (typeof region.colorDelta !== 'number') {
+        region.colorDelta = region.kind === 'environment' ? 9 : region.severity === 'high' ? 46 : 18
+        changed = true
+      }
+      if (!region.selector) {
+        region.selector =
+          region.kind === 'environment'
+            ? '[data-visual-ignore="relative-time"]'
+            : region.kind === 'color'
+              ? '.price-tag'
+              : '.checkout-summary-bar'
+        changed = true
+      }
+    }
+  }
+  for (const baseline of db.baselines) {
+    if (typeof baseline.rulesVersion !== 'number') {
+      baseline.rulesVersion = 1
+      changed = true
+    }
+  }
+  if (changed) writeDb(db)
+  return db
+}
 
 export const readDb = (): Database => {
   const raw = localStorage.getItem(STORAGE_KEY)
@@ -271,7 +333,7 @@ export const readDb = (): Database => {
     return initial
   }
   try {
-    return JSON.parse(raw) as Database
+    return migrate(JSON.parse(raw) as Database)
   } catch {
     const initial = seed()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))

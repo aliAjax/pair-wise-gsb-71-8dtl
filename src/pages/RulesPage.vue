@@ -2,7 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { Message, Modal } from '@arco-design/web-vue'
-import { createRule, deleteRule, getProjects, getRules, toggleRule } from '@/api/http'
+import { createRule, deleteRule, getProjects, getRules, getVersionMeta, toggleRule } from '@/api/http'
 import type { IgnoreRule } from '@/types'
 
 const queryClient = useQueryClient()
@@ -19,8 +19,15 @@ const form = reactive({
 
 const { data: rules, isLoading } = useQuery({ queryKey: ['rules'], queryFn: getRules })
 const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: getProjects })
+const { data: meta } = useQuery({ queryKey: ['meta'], queryFn: getVersionMeta, refetchInterval: 4000 })
 
-const refreshRules = async () => queryClient.invalidateQueries({ queryKey: ['rules'] })
+const refreshRules = async () => {
+  await queryClient.invalidateQueries({ queryKey: ['rules'] })
+  await queryClient.invalidateQueries({ queryKey: ['meta'] })
+  await queryClient.invalidateQueries({ queryKey: ['runs'] })
+  await queryClient.invalidateQueries({ queryKey: ['baselines'] })
+  await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+}
 
 const createMutation = useMutation({
   mutationFn: createRule,
@@ -67,7 +74,7 @@ const submitRule = () => {
 const confirmDelete = (rule: IgnoreRule) => {
   Modal.warning({
     title: '删除忽略规则',
-    content: `删除“${rule.name}”后，后续运行将重新标记该区域。`,
+    content: `删除“${rule.name}”会递增规则版本：待审批运行将重算差异区域，已批准基线进入待复核。`,
     hideCancel: false,
     onOk: () => deleteMutation.mutate(rule.id),
   })
@@ -83,11 +90,14 @@ const projectName = (id: string) =>
       <h2>差异忽略规则</h2>
       <p>用稳定的 DOM 选择器和限制条件排除时间、水印、随机头像等环境噪声。</p>
     </div>
-    <a-button type="primary" @click="modalVisible = true"><icon-plus /> 新建规则</a-button>
+    <a-space>
+      <a-tag color="arcoblue" size="large">当前规则集 v{{ meta?.rulesVersion ?? 1 }}</a-tag>
+      <a-button type="primary" @click="modalVisible = true"><icon-plus /> 新建规则</a-button>
+    </a-space>
   </section>
 
   <a-alert type="info" style="margin-bottom: 16px">
-    规则不会自动批准整张截图；启用后仅在差异报告中折叠匹配区域，高风险区域仍需人工判定。
+    每次新建、启停或删除规则都会递增规则版本：待审批运行的旧判定立即失效并按新规则重算差异区域；已批准运行和有效基线保留原样，自动列入待复核。
   </a-alert>
 
   <a-card class="table-panel" :bordered="false">

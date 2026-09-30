@@ -228,6 +228,7 @@ const submitImport = async () => {
           <template #cell="{ record }">
             <code>{{ record.build }}</code>
             <div class="sub-text">{{ record.baselineVersion }} → {{ record.currentVersion }}</div>
+            <div class="sub-text">规则 v{{ record.regionsRulesVersion ?? 1 }}<template v-if="record.needsReview"> · 待复核</template></div>
           </template>
         </a-table-column>
         <a-table-column title="差异" :width="110">
@@ -236,7 +237,10 @@ const submitImport = async () => {
           </template>
         </a-table-column>
         <a-table-column title="差异区域" :width="100">
-          <template #cell="{ record }">{{ record.regions.length }} 处</template>
+          <template #cell="{ record }">
+            {{ record.regions.length }} 处
+            <div v-if="record.invalidated" class="sub-text"><a-tag color="red" size="small">已失效</a-tag></div>
+          </template>
         </a-table-column>
         <a-table-column title="状态" :width="100">
           <template #cell="{ record }"><StatusTag :status="record.status" /></template>
