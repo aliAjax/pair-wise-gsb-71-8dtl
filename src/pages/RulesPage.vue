@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { Message, Modal } from '@arco-design/web-vue'
 import { createRule, deleteRule, getProjects, getRules, toggleRule } from '@/api/http'
-import type { IgnoreRule } from '@/types'
+import type { IgnoreRule, RuleReconcileSummary } from '@/types'
 
 const queryClient = useQueryClient()
 const modalVisible = ref(false)
@@ -20,12 +20,27 @@ const form = reactive({
 const { data: rules, isLoading } = useQuery({ queryKey: ['rules'], queryFn: getRules })
 const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: getProjects })
 
-const refreshRules = async () => queryClient.invalidateQueries({ queryKey: ['rules'] })
+const refreshRules = async () => {
+  await queryClient.invalidateQueries({ queryKey: ['rules'] })
+  await queryClient.invalidateQueries({ queryKey: ['runs'] })
+  await queryClient.invalidateQueries({ queryKey: ['baselines'] })
+  await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+}
+
+const describeReconcile = (reconcile: RuleReconcileSummary) => {
+  const parts = [
+    `规则集升至 v${reconcile.rulesVersion}`,
+    `${reconcile.invalidatedRunIds.length} 条待审批运行差异失效并重算`,
+    `${reconcile.rereviewRunIds.length} 条已批准运行列入待复核`,
+    `${reconcile.rereviewBaselineIds.length} 个有效基线列入待复核`,
+  ]
+  return parts.join('，')
+}
 
 const createMutation = useMutation({
   mutationFn: createRule,
-  onSuccess: async () => {
-    Message.success('忽略规则已创建')
+  onSuccess: async ({ reconcile }) => {
+    Message.success({ content: `忽略规则已创建：${describeReconcile(reconcile)}`, duration: 4000 })
     modalVisible.value = false
     Object.assign(form, {
       name: '',
@@ -43,14 +58,17 @@ const createMutation = useMutation({
 
 const toggleMutation = useMutation({
   mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => toggleRule(id, enabled),
-  onSuccess: refreshRules,
+  onSuccess: async ({ reconcile }) => {
+    Message.info({ content: describeReconcile(reconcile), duration: 4000 })
+    await refreshRules()
+  },
   onError: (error: Error) => Message.error(error.message),
 })
 
 const deleteMutation = useMutation({
   mutationFn: deleteRule,
-  onSuccess: async () => {
-    Message.success('规则已删除')
+  onSuccess: async ({ reconcile }) => {
+    Message.success({ content: `规则已删除：${describeReconcile(reconcile)}`, duration: 4000 })
     await refreshRules()
   },
   onError: (error: Error) => Message.error(error.message),
@@ -67,7 +85,7 @@ const submitRule = () => {
 const confirmDelete = (rule: IgnoreRule) => {
   Modal.warning({
     title: '删除忽略规则',
-    content: `删除“${rule.name}”后，后续运行将重新标记该区域。`,
+    content: `删除“${rule.name}”后，作用域内待审批运行将先失效并按新规则集重算差异，已批准运行和有效基线会列入待复核。`,
     hideCancel: false,
     onOk: () => deleteMutation.mutate(rule.id),
   })
@@ -81,13 +99,13 @@ const projectName = (id: string) =>
   <section class="page-intro compact">
     <div>
       <h2>差异忽略规则</h2>
-      <p>用稳定的 DOM 选择器和限制条件排除时间、水印、随机头像等环境噪声。</p>
+      <p>用稳定的 DOM 选择器和限制条件排除时间、水印、随机头像等环境噪声；每次改动都提升规则集版本并触发对账。</p>
     </div>
     <a-button type="primary" @click="modalVisible = true"><icon-plus /> 新建规则</a-button>
   </section>
 
   <a-alert type="info" style="margin-bottom: 16px">
-    规则不会自动批准整张截图；启用后仅在差异报告中折叠匹配区域，高风险区域仍需人工判定。
+    规则变更后：作用域内待审批运行的差异判定先失效并按新规则重算，需评审人重新确认；已批准运行和有效基线保留原判定，仅列入待复核。
   </a-alert>
 
   <a-card class="table-panel" :bordered="false">
@@ -95,22 +113,22 @@ const projectName = (id: string) =>
       <template #columns>
         <a-table-column title="规则名称" :width="190">
           <template #cell="{ record }">
-            <div class="primary-cell"><strong>{{ record.name }}</strong><span>{{ record.id }}</span></div>
+            <div class="primary-cell"><strong>{{ record.name }}</strong><span>{{ record.id }} · v{{ record.version }}</span></div>
           </template>
         </a-table-column>
-        <a-table-column title="作用范围" :width="160">
+        <a-table-column title="作用范围" :width="150">
           <template #cell="{ record }">{{ projectName(record.projectId) }}</template>
         </a-table-column>
-        <a-table-column title="DOM 选择器" :width="240">
+        <a-table-column title="DOM 选择器" :width="230">
           <template #cell="{ record }"><code>{{ record.selector }}</code></template>
         </a-table-column>
-        <a-table-column title="页面 / 设备" :width="180">
+        <a-table-column title="页面 / 设备" :width="170">
           <template #cell="{ record }">{{ record.pagePattern }} · {{ record.devicePattern }}</template>
         </a-table-column>
-        <a-table-column title="最大色差" :width="110">
+        <a-table-column title="最大色差" :width="100">
           <template #cell="{ record }">Δ {{ record.maxDelta }}</template>
         </a-table-column>
-        <a-table-column title="启用" :width="100">
+        <a-table-column title="启用" :width="90">
           <template #cell="{ record }">
             <a-switch
               :model-value="record.enabled"

@@ -227,7 +227,7 @@ const submitImport = async () => {
         <a-table-column title="构建版本" :width="180">
           <template #cell="{ record }">
             <code>{{ record.build }}</code>
-            <div class="sub-text">{{ record.baselineVersion }} → {{ record.currentVersion }}</div>
+            <div class="sub-text">{{ record.baselineVersion }} → {{ record.currentVersion }} · 规则 v{{ record.rulesVersion }}</div>
           </template>
         </a-table-column>
         <a-table-column title="差异" :width="110">
@@ -238,8 +238,14 @@ const submitImport = async () => {
         <a-table-column title="差异区域" :width="100">
           <template #cell="{ record }">{{ record.regions.length }} 处</template>
         </a-table-column>
-        <a-table-column title="状态" :width="100">
-          <template #cell="{ record }"><StatusTag :status="record.status" /></template>
+        <a-table-column title="状态" :width="120">
+          <template #cell="{ record }">
+            <StatusTag
+              :status="record.status"
+              :stale="record.diffState === 'stale'"
+              :rereview="Boolean(record.rereview && !record.rereview.resolved)"
+            />
+          </template>
         </a-table-column>
         <a-table-column title="操作" :width="110" fixed="right">
           <template #cell="{ record }"><router-link :to="`/runs/${record.id}`">差异定位</router-link></template>

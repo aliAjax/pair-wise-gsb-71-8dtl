@@ -479,6 +479,35 @@ code {
   gap: 16px;
 }
 
+.version-facts {
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+
+.version-facts strong.danger {
+  color: #f53f3f;
+}
+
+.decided-alert {
+  margin: 16px;
+}
+
+.queue-section {
+  margin-bottom: 18px;
+}
+
+.queue-section > h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.queue-section > h3 small {
+  margin-left: 8px;
+  color: #86909c;
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .comparison-area,
 .review-panel,
 .history-panel {

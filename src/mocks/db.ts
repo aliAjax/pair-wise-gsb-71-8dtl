@@ -1,12 +1,15 @@
 import type { Baseline, DifferenceRegion, IgnoreRule, Project, ScreenshotRun } from '@/types'
 
 const STORAGE_KEY = 'visual-regression-platform-v1'
+/** 初始规则集版本，已存在的本地数据迁移到该版本 */
+export const SEED_RULES_VERSION = 3
 
 interface Database {
   projects: Project[]
   runs: ScreenshotRun[]
   baselines: Baseline[]
   rules: IgnoreRule[]
+  rulesVersion: number
 }
 
 const projects: Project[] = [
@@ -26,6 +29,7 @@ const makeRegions = (prefix: string, intensity: number): DifferenceRegion[] => [
     pixels: Math.round(1840 * intensity),
     kind: 'layout',
     ignored: false,
+    selector: '.checkout-summary-card',
   },
   {
     id: `${prefix}-r2`,
@@ -37,6 +41,7 @@ const makeRegions = (prefix: string, intensity: number): DifferenceRegion[] => [
     pixels: Math.round(720 * intensity),
     kind: 'color',
     ignored: false,
+    selector: '.checkout-coupon-badge',
   },
   {
     id: `${prefix}-r3`,
@@ -49,6 +54,9 @@ const makeRegions = (prefix: string, intensity: number): DifferenceRegion[] => [
     kind: 'environment',
     ignored: true,
     ruleId: 'rule-time',
+    ruleVersion: 3,
+    selector: '[data-visual-ignore="relative-time"]',
+    delta: 6,
   },
 ]
 
@@ -66,6 +74,8 @@ const runs: ScreenshotRun[] = [
     capturedAt: '2026-09-29T08:42:00+08:00',
     baselineVersion: 'v6.17.4-baseline',
     currentVersion: 'v6.18.0-rc2',
+    rulesVersion: SEED_RULES_VERSION,
+    diffState: 'current',
     regions: makeRegions('1048', 1),
   },
   {
@@ -81,6 +91,8 @@ const runs: ScreenshotRun[] = [
     capturedAt: '2026-09-29T08:36:00+08:00',
     baselineVersion: 'v6.17.4-baseline',
     currentVersion: 'v6.18.0-rc2',
+    rulesVersion: SEED_RULES_VERSION,
+    diffState: 'current',
     regions: makeRegions('1047', 0.7),
   },
   {
@@ -96,6 +108,8 @@ const runs: ScreenshotRun[] = [
     capturedAt: '2026-09-28T17:20:00+08:00',
     baselineVersion: 'v5.9.1-baseline',
     currentVersion: 'billing-v3.7',
+    rulesVersion: SEED_RULES_VERSION,
+    diffState: 'current',
     regions: makeRegions('1046', 1.4),
     review: {
       category: 'design-change',
@@ -103,6 +117,8 @@ const runs: ScreenshotRun[] = [
       reviewer: '林默',
       reason: '新计费周期列按需求上线，已核对设计稿和验收单。',
       reviewedAt: '2026-09-28T18:02:00+08:00',
+      baselineVersion: 'v5.9.1-baseline',
+      rulesVersion: SEED_RULES_VERSION,
     },
   },
   {
@@ -118,6 +134,8 @@ const runs: ScreenshotRun[] = [
     capturedAt: '2026-09-28T15:11:00+08:00',
     baselineVersion: 'v2.4.0-baseline',
     currentVersion: 'campaign-v2',
+    rulesVersion: SEED_RULES_VERSION,
+    diffState: 'current',
     regions: makeRegions('1045', 2.2),
     review: {
       category: 'render-error',
@@ -125,6 +143,8 @@ const runs: ScreenshotRun[] = [
       reviewer: '梁琪',
       reason: '主操作区被侧栏遮挡，属于阻断性渲染异常。',
       reviewedAt: '2026-09-28T15:44:00+08:00',
+      baselineVersion: 'v2.4.0-baseline',
+      rulesVersion: SEED_RULES_VERSION,
     },
   },
   {
@@ -140,6 +160,8 @@ const runs: ScreenshotRun[] = [
     capturedAt: '2026-09-28T13:30:00+08:00',
     baselineVersion: 'v5.9.1-baseline',
     currentVersion: 'v5.10.0-rc1',
+    rulesVersion: SEED_RULES_VERSION,
+    diffState: 'current',
     regions: makeRegions('1044', 0.9),
   },
   {
@@ -155,6 +177,8 @@ const runs: ScreenshotRun[] = [
     capturedAt: '2026-09-27T19:15:00+08:00',
     baselineVersion: 'v2.5.3-baseline',
     currentVersion: 'v2.6.0-rc3',
+    rulesVersion: SEED_RULES_VERSION,
+    diffState: 'current',
     regions: makeRegions('1043', 0.5),
   },
 ]
@@ -172,6 +196,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-09-19T11:30:00+08:00',
     runId: 'run-998',
     active: true,
+    rulesVersion: SEED_RULES_VERSION,
   },
   {
     id: 'base-console-billing',
@@ -185,6 +210,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-09-12T14:05:00+08:00',
     runId: 'run-961',
     active: true,
+    rulesVersion: SEED_RULES_VERSION,
   },
   {
     id: 'base-growth-campaign',
@@ -198,6 +224,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-08-28T10:10:00+08:00',
     runId: 'run-902',
     active: false,
+    rulesVersion: 2,
   },
   {
     id: 'base-commerce-list',
@@ -211,6 +238,7 @@ const baselines: Baseline[] = [
     approvedAt: '2026-09-20T16:40:00+08:00',
     runId: 'run-1002',
     active: true,
+    rulesVersion: SEED_RULES_VERSION,
   },
 ]
 
@@ -225,6 +253,7 @@ const rules: IgnoreRule[] = [
     maxDelta: 12,
     enabled: true,
     createdAt: '2026-09-02T09:00:00+08:00',
+    version: 3,
   },
   {
     id: 'rule-avatar',
@@ -236,6 +265,7 @@ const rules: IgnoreRule[] = [
     maxDelta: 20,
     enabled: true,
     createdAt: '2026-09-05T13:25:00+08:00',
+    version: 3,
   },
   {
     id: 'rule-watermark',
@@ -247,6 +277,7 @@ const rules: IgnoreRule[] = [
     maxDelta: 5,
     enabled: true,
     createdAt: '2026-08-21T11:08:00+08:00',
+    version: 3,
   },
   {
     id: 'rule-animation',
@@ -258,10 +289,56 @@ const rules: IgnoreRule[] = [
     maxDelta: 8,
     enabled: false,
     createdAt: '2026-08-16T17:12:00+08:00',
+    version: 3,
   },
 ]
 
-const seed = (): Database => ({ projects, runs, baselines, rules })
+const seed = (): Database => ({
+  projects,
+  runs,
+  baselines,
+  rules,
+  rulesVersion: SEED_RULES_VERSION,
+})
+
+/** 旧版本地数据补齐对账字段，视为与种子相同的规则集版本 */
+const migrate = (db: Partial<Database>): Database => ({
+  projects: db.projects ?? [],
+  rulesVersion: typeof db.rulesVersion === 'number' ? db.rulesVersion : SEED_RULES_VERSION,
+  rules: (db.rules ?? []).map((rule) =>
+    typeof rule.version === 'number' ? rule : { ...rule, version: SEED_RULES_VERSION },
+  ),
+  runs: (db.runs ?? []).map((run) => {
+    const review =
+      run.review === undefined
+        ? undefined
+        : {
+            ...run.review,
+            baselineVersion: run.review.baselineVersion ?? run.baselineVersion,
+            rulesVersion:
+              typeof run.review.rulesVersion === 'number'
+                ? run.review.rulesVersion
+                : SEED_RULES_VERSION,
+          }
+    return {
+      ...run,
+      rulesVersion:
+        typeof run.rulesVersion === 'number' ? run.rulesVersion : SEED_RULES_VERSION,
+      diffState: run.diffState === 'stale' ? 'stale' : 'current',
+      regions: run.regions.map((region) =>
+        typeof region.delta === 'number'
+          ? region
+          : { ...region, delta: ((region.x * 7 + region.y * 11 + region.pixels) % 24) },
+      ),
+      review,
+    }
+  }),
+  baselines: (db.baselines ?? []).map((baseline) => ({
+    ...baseline,
+    rulesVersion:
+      typeof baseline.rulesVersion === 'number' ? baseline.rulesVersion : SEED_RULES_VERSION,
+  })),
+})
 
 export const readDb = (): Database => {
   const raw = localStorage.getItem(STORAGE_KEY)
@@ -271,7 +348,7 @@ export const readDb = (): Database => {
     return initial
   }
   try {
-    return JSON.parse(raw) as Database
+    return migrate(JSON.parse(raw) as Database)
   } catch {
     const initial = seed()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))

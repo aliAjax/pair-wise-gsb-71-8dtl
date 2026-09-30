@@ -20,7 +20,7 @@ const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '"
 
 const exportCsv = () => {
   const rows = [
-    ['运行ID', '页面', '设备', '主题', '构建', '状态', '差异率', '差异区域', '审批人', '审批原因'],
+    ['运行ID', '页面', '设备', '主题', '构建', '状态', '差异率', '差异区域', '规则集版本', '审批人', '审批依据基线', '审批原因'],
     ...(runs.value ?? []).map((run) => [
       run.id,
       run.page,
@@ -30,7 +30,9 @@ const exportCsv = () => {
       run.status,
       run.mismatchRate.toFixed(2),
       run.regions.length,
+      run.rulesVersion,
       run.review?.reviewer ?? '',
+      run.review?.baselineVersion ?? '',
       run.review?.reason ?? '',
     ]),
   ]

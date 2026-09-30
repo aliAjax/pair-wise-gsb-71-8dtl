@@ -28,11 +28,20 @@ const { data: runs } = useQuery({
     </section>
 
     <div class="metric-grid">
-      <MetricPanel label="待审批运行" :value="dashboard?.pendingReview ?? 0" note="其中 2 条影响发布" tone="orange" />
-      <MetricPanel label="今日已批准" :value="dashboard?.approvedToday ?? 0" note="均记录批准原因" tone="green" />
-      <MetricPanel label="高风险差异" :value="dashboard?.highRisk ?? 0" note="差异率高于 5%" tone="red" />
+      <MetricPanel label="待审批运行" :value="dashboard?.pendingReview ?? 0" :note="`其中 ${dashboard?.staleRuns ?? 0} 条差异已失效待确认`" tone="orange" />
+      <MetricPanel label="今日已批准" :value="dashboard?.approvedToday ?? 0" note="均记录批准原因与依据版本" tone="green" />
+      <MetricPanel label="待复核（规则变更）" :value="dashboard?.pendingRereview ?? 0" note="原判定保留，仅需确认无需改判" tone="red" />
       <MetricPanel label="有效基线" :value="dashboard?.activeBaselines ?? 0" note="覆盖 6 个关键页面" tone="blue" />
     </div>
+
+    <a-alert
+      v-if="(dashboard?.staleRuns ?? 0) > 0"
+      type="warning"
+      style="margin-bottom: 16px"
+    >
+      忽略规则变更后有 {{ dashboard?.staleRuns }} 条待审批运行的差异已失效并按新规则重算，请评审人先核对再审批，旧依据上的审批不会通过。
+      <template #action><router-link to="/approvals">前往队列</router-link></template>
+    </a-alert>
 
     <div class="dashboard-grid">
       <a-card class="work-panel" :bordered="false">
@@ -65,7 +74,7 @@ const { data: runs } = useQuery({
               <span>{{ run.device }} · {{ run.build }}</span>
             </div>
             <b class="mismatch">{{ run.mismatchRate.toFixed(2) }}%</b>
-            <StatusTag :status="run.status" />
+            <StatusTag :status="run.status" :stale="run.diffState === 'stale'" />
             <router-link :to="`/runs/${run.id}`">定位差异</router-link>
           </div>
         </div>
